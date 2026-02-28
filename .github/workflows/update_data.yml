@@ -2,7 +2,7 @@ name: Update Status Data
 
 on:
   schedule:
-    - cron: '* * * * *'   # every minute (GitHub throttles to ~5 min)
+    - cron: "*/5 * * * *" # every 5 minutes
   workflow_dispatch:
 
 permissions:
@@ -19,16 +19,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch status data
-        run: |
-          mkdir -p data
-          for days in 1 7 30 90; do
-            echo "Fetching days=${days}..."
-            curl -sf --retry 3 --retry-delay 2 --max-time 30 \
-              "https://platform.acedata.cloud/api/v1/status/?days=${days}" \
-              -o "data/status_${days}.json" || echo "Failed to fetch days=${days}"
-          done
-          ls -la data/
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install psycopg2-binary
+
+      - name: Generate status data from DB
+        env:
+          PGSQL_HOST: ${{ secrets.PGSQL_HOST }}
+          PGSQL_PORT: ${{ secrets.PGSQL_PORT }}
+          PGSQL_USER: ${{ secrets.PGSQL_USER }}
+          PGSQL_PASSWORD: ${{ secrets.PGSQL_PASSWORD }}
+          PGSQL_DATABASE: acedatacloud_platform
+        run: python scripts/generate_status.py
 
       - name: Commit & push if changed
         run: |

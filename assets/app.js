@@ -2,6 +2,7 @@
   const API_BASE = 'https://platform.acedata.cloud/api/v1/status/';
 
   let currentDays = 1; // default: 24 hours
+  let currentGranularity = 'hourly'; // set from API response
 
   const STATUS_CONFIG = {
     operational:    { label: 'Operational',     barColor: 'bg-emerald-500', dotColor: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
@@ -18,6 +19,25 @@
     'Major System Outage': { bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-200 dark:border-red-800/50', icon: '\u2715', iconBg: 'bg-red-500', text: 'text-red-700 dark:text-red-300' },
   };
 
+  /* ---------- Time slot generators ---------- */
+
+  function getLast24Hours() {
+    const slots = [];
+    const now = new Date();
+    // Round down to current hour
+    now.setMinutes(0, 0, 0);
+    for (let i = 23; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 3600000);
+      // Format as YYYY-MM-DDTHH:00 to match backend key
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      slots.push(`${yyyy}-${mm}-${dd}T${hh}:00`);
+    }
+    return slots;
+  }
+
   function getLastNDays(n) {
     const days = [];
     const now = new Date();
@@ -28,6 +48,13 @@
     }
     return days;
   }
+
+  function getTimeSlots() {
+    if (currentGranularity === 'hourly') return getLast24Hours();
+    return getLastNDays(currentDays);
+  }
+
+  /* ---------- Helpers ---------- */
 
   function dayStatusFromUptime(uptime) {
     if (uptime >= 95) return 'operational';
@@ -49,11 +76,34 @@
     return raw;
   }
 
-  function formatNumber(n) {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-    return String(n);
+  function formatSlotLabel(slot) {
+    if (currentGranularity === 'hourly') {
+      // slot = "2026-02-28T14:00"
+      const hour = parseInt(slot.slice(11, 13), 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${h12} ${ampm}`;
+    }
+    // daily: "2026-02-28"
+    const d = new Date(slot);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
+
+  function formatTooltipDate(slot) {
+    if (currentGranularity === 'hourly') {
+      // "2026-02-28T14:00" → "Feb 28, 2 PM"
+      const d = new Date(slot.replace('T', ' ').replace(':00', ':00:00'));
+      const datePart = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const hour = parseInt(slot.slice(11, 13), 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${datePart}, ${h12} ${ampm}`;
+    }
+    const d = new Date(slot);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  /* ---------- Rendering ---------- */
 
   function renderBanner(overallStatus) {
     const banner = document.getElementById('overall-banner');
@@ -72,9 +122,9 @@
   }
 
   function renderService(service) {
-    const allDays = getLastNDays(currentDays);
-    const dailyMap = {};
-    (service.daily || []).forEach(d => { dailyMap[d.date] = d; });
+    const allSlots = getTimeSlots();
+    const dataMap = {};
+    (service.daily || []).forEach(d => { dataMap[d.date] = d; });
 
     const cfg = STATUS_CONFIG[service.current_status] || STATUS_CONFIG.unknown;
     const title = cleanTitle(service.service_title) || service.service_alias || 'Unknown';
@@ -97,57 +147,30 @@
     `;
     card.appendChild(header);
 
-    // For 1 day, show a single wide bar
-    if (currentDays === 1) {
-      const singleBar = document.createElement('div');
-      singleBar.className = 'h-8 rounded-md';
-      const dayData = dailyMap[allDays[0]];
-      if (dayData) {
-        const status = dayStatusFromUptime(dayData.uptime);
-        const barCfg = STATUS_CONFIG[status];
-        singleBar.className += ` ${barCfg.barColor}`;
-      } else {
-        singleBar.className += ' bg-emerald-500 opacity-50';
-      }
-      card.appendChild(singleBar);
-
-      const dateLabels = document.createElement('div');
-      dateLabels.className = 'flex justify-between mt-1.5 text-[10px] text-slate-400 dark:text-slate-500';
-      dateLabels.innerHTML = `
-        <span>Today</span>
-        <span>${service.uptime_90d.toFixed(2)}% uptime</span>
-        <span></span>
-      `;
-      card.appendChild(dateLabels);
-      return card;
-    }
-
-    // Bar chart (N bars)
+    // Bar chart
     const barContainer = document.createElement('div');
     barContainer.className = 'flex items-end gap-px h-8';
 
-    allDays.forEach(dateStr => {
-      const dayData = dailyMap[dateStr];
+    allSlots.forEach(slot => {
+      const slotData = dataMap[slot];
       const wrapper = document.createElement('div');
       wrapper.className = 'bar-wrapper relative flex-1 h-full flex items-end';
 
       const bar = document.createElement('div');
       bar.className = 'w-full rounded-sm transition-all duration-150 hover:opacity-80 cursor-pointer';
 
-      if (dayData) {
-        const status = dayStatusFromUptime(dayData.uptime);
+      if (slotData) {
+        const status = dayStatusFromUptime(slotData.uptime);
         const barCfg = STATUS_CONFIG[status];
         bar.className += ` ${barCfg.barColor}`;
         bar.style.height = '100%';
 
         const tooltip = document.createElement('div');
         tooltip.className = 'bar-tooltip px-2.5 py-1.5 rounded-lg text-xs bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg';
-        const d = new Date(dateStr);
-        const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         tooltip.innerHTML = `
-          <div class="font-medium">${dateLabel}</div>
-          <div>${dayData.uptime.toFixed(2)}% uptime</div>
-          ${dayData.server_error_count > 0 ? `<div class="text-red-400 dark:text-red-600">${dayData.server_error_count} errors</div>` : ''}
+          <div class="font-medium">${formatTooltipDate(slot)}</div>
+          <div>${slotData.uptime.toFixed(2)}% uptime</div>
+          ${slotData.server_error_count > 0 ? `<div class="text-red-400 dark:text-red-600">${slotData.server_error_count} errors</div>` : ''}
         `;
         wrapper.appendChild(tooltip);
       } else {
@@ -161,14 +184,15 @@
 
     card.appendChild(barContainer);
 
+    // Date labels
     const dateLabels = document.createElement('div');
     dateLabels.className = 'flex justify-between mt-1.5 text-[10px] text-slate-400 dark:text-slate-500';
-    const firstDate = new Date(allDays[0]);
-    const lastDate = new Date(allDays[allDays.length - 1]);
+    const firstLabel = formatSlotLabel(allSlots[0]);
+    const lastLabel = formatSlotLabel(allSlots[allSlots.length - 1]);
     dateLabels.innerHTML = `
-      <span>${firstDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+      <span>${firstLabel}</span>
       <span>${service.uptime_90d.toFixed(2)}% uptime</span>
-      <span>${lastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+      <span>${lastLabel}</span>
     `;
     card.appendChild(dateLabels);
 
@@ -204,6 +228,8 @@
       const res = await fetch(`${API_BASE}?days=${currentDays}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+
+      currentGranularity = data.granularity || (currentDays === 1 ? 'hourly' : 'daily');
 
       renderBanner(data.overall_status);
       updateRangeButtons();

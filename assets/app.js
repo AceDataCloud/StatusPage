@@ -205,13 +205,9 @@
         `;
         wrapper.appendChild(tooltip);
       } else {
-        bar.className += ' bg-emerald-500/40';
+        // No data — treat as 100% operational
+        bar.className += ' bg-emerald-500';
         bar.style.height = '100%';
-
-        const tooltip = document.createElement('div');
-        tooltip.className = 'bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg';
-        tooltip.innerHTML = `<div class="font-medium">${formatTooltipDate(slot)}</div><div>No data</div>`;
-        wrapper.appendChild(tooltip);
       }
 
       wrapper.appendChild(bar);

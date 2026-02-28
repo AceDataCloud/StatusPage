@@ -142,7 +142,16 @@
   function renderService(service) {
     const allSlots = getTimeSlots();
     const dataMap = {};
-    (service.daily || []).forEach(d => { dataMap[d.date] = d; });
+    (service.daily || []).forEach(d => {
+      if (currentGranularity === 'hourly') {
+        // API returns UTC keys like "2026-02-28T08:00"; convert to local-time key
+        const utc = new Date(d.date + 'Z');
+        const lk = `${utc.getFullYear()}-${String(utc.getMonth()+1).padStart(2,'0')}-${String(utc.getDate()).padStart(2,'0')}T${String(utc.getHours()).padStart(2,'0')}:00`;
+        dataMap[lk] = d;
+      } else {
+        dataMap[d.date] = d;
+      }
+    });
 
     const cfg = STATUS_CONFIG[service.current_status] || STATUS_CONFIG.unknown;
     const title = getServiceName(service.service_alias, service.service_title);
@@ -167,7 +176,7 @@
 
     // Bar chart
     const barContainer = document.createElement('div');
-    barContainer.className = 'flex items-end gap-[1px] h-7';
+    barContainer.className = 'flex items-end h-7 rounded overflow-hidden';
 
     allSlots.forEach(slot => {
       const slotData = dataMap[slot];
@@ -175,7 +184,7 @@
       wrapper.className = 'bar-wrapper relative flex-1 h-full flex items-end';
 
       const bar = document.createElement('div');
-      bar.className = 'w-full rounded-[2px] transition-all duration-150 hover:opacity-75 cursor-pointer';
+      bar.className = 'w-full transition-all duration-150 hover:opacity-75 cursor-pointer';
 
       if (slotData) {
         const status = dayStatusFromUptime(slotData.uptime);
@@ -192,8 +201,13 @@
         `;
         wrapper.appendChild(tooltip);
       } else {
-        bar.className += ' bg-emerald-500';
+        bar.className += ' bg-emerald-500/40';
         bar.style.height = '100%';
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg';
+        tooltip.innerHTML = `<div class="font-medium">${formatTooltipDate(slot)}</div><div>No data</div>`;
+        wrapper.appendChild(tooltip);
       }
 
       wrapper.appendChild(bar);

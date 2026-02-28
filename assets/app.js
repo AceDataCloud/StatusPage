@@ -1,5 +1,5 @@
 (() => {
-  const API_BASE = 'https://platform.acedata.cloud/api/v1/status/';
+  const DATA_BASE = './data';
 
   let currentDays = 1;
   let currentGranularity = 'daily'; // overridden by API response
@@ -248,7 +248,7 @@
 
   async function load() {
     try {
-      const res = await fetch(`${API_BASE}?days=${currentDays}`);
+      const res = await fetch(`${DATA_BASE}/status_${currentDays}.json?t=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -286,5 +286,5 @@
     load();
   });
 
-  setInterval(load, 5 * 60 * 1000);
+  setInterval(load, 60 * 1000);
 })();

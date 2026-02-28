@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" class="h-full scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <title>Ace Data Cloud Status</title>
+    <meta name="description" content="Ace Data Cloud — Real-time service status and uptime history." />
+    <link rel="icon" href="./favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              display: ['Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+            },
+            colors: {
+              ace: { emerald: '#06eca3', blue: '#2aa9ff' }
+            }
+          }
+        }
+      }
+    </script>
+    <script src="./assets/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg0: #f8fafc; --bg1: #fff;
+        --cardA: hsla(0,0%,100%,.72); --cardB: rgba(241,245,249,.62);
+        --stroke: rgba(15,23,42,.12); --shadow: rgba(2,6,23,.08);
+      }
+      html.dark {
+        --bg0: #020617; --bg1: #030712;
+        --cardA: rgba(15,23,42,.78); --cardB: rgba(2,6,23,.62);
+        --stroke: rgba(148,163,184,.16); --shadow: rgba(2,6,23,.65);
+      }
+      body {
+        background: linear-gradient(180deg, var(--bg0), var(--bg1));
+        min-height: 100vh;
+      }
+      .glass {
+        background: linear-gradient(180deg, var(--cardA), var(--cardB));
+        border: 1px solid var(--stroke);
+        box-shadow: 0 0 0 1px rgba(148,163,184,.1) inset, 0 24px 80px var(--shadow);
+      }
+      .bar-tooltip {
+        display: none;
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        z-index: 50;
+      }
+      .bar-wrapper:hover .bar-tooltip { display: block; }
+    </style>
+  </head>
+  <body class="antialiased text-slate-950 transition-colors duration-200 dark:text-slate-100">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur border-b border-slate-900/10 dark:border-white/10">
+      <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="https://acedata.cloud" class="flex items-center gap-2 text-lg font-semibold font-display">
+            <svg viewBox="0 0 24 24" fill="none" class="w-6 h-6" aria-hidden="true">
+              <path d="M12 2l8 4v6c0 5.2-3.3 9.7-8 10-4.7-.3-8-4.8-8-10V6l8-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M9.2 12.3l1.9 1.9 3.8-4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+            </svg>
+            Ace Data Cloud
+          </a>
+          <span class="text-sm text-slate-500 dark:text-slate-400">Status</span>
+        </div>
+        <button id="theme-toggle" class="p-2 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/10 transition-colors" aria-label="Toggle theme">
+          <svg id="icon-sun" class="w-5 h-5 hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 18a6 6 0 100-12 6 6 0 000 12z"/>
+            <path d="M12 2v2.2M12 19.8V22M4.2 12H2M22 12h-2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6" stroke-linecap="round"/>
+          </svg>
+          <svg id="icon-moon" class="w-5 h-5 block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 14.8A8.6 8.6 0 019.2 3a7.4 7.4 0 1011.8 11.8z" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="max-w-4xl mx-auto px-6 py-10">
+
+      <!-- Overall Status Banner -->
+      <div id="overall-banner" class="glass rounded-2xl p-6 mb-8 text-center">
+        <div id="overall-icon" class="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"></div>
+        <h1 id="overall-text" class="text-2xl font-semibold font-display">Loading...</h1>
+        <p id="overall-sub" class="text-sm text-slate-500 dark:text-slate-400 mt-1"></p>
+      </div>
+
+      <!-- Services -->
+      <div id="services-container" class="space-y-4">
+        <div class="text-center text-slate-400 py-12">
+          <div class="inline-block w-6 h-6 border-2 border-slate-300 dark:border-slate-600 border-t-ace-blue rounded-full animate-spin"></div>
+          <p class="mt-2 text-sm">Loading status data...</p>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-500"></span> Operational</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-yellow-500"></span> Degraded</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-orange-500"></span> Partial Outage</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-500"></span> Major Outage</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-slate-200 dark:bg-slate-700"></span> No Data</span>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-4xl mx-auto px-6 pb-10 text-center text-xs text-slate-400 dark:text-slate-500">
+      <p>Powered by <a href="https://acedata.cloud" class="underline hover:text-slate-600 dark:hover:text-slate-300">Ace Data Cloud</a></p>
+    </footer>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>

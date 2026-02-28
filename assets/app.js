@@ -1,5 +1,5 @@
 (() => {
-  const DATA_BASE = './data';
+  const API_BASE = 'https://platform.acedata.cloud/api/v1/status';
 
   let currentDays = 1;
   let currentGranularity = 'daily'; // overridden by API response
@@ -269,7 +269,7 @@
 
   async function load() {
     try {
-      const res = await fetch(`${DATA_BASE}/status_${currentDays}.json?t=${Date.now()}`);
+      const res = await fetch(`${API_BASE}/?days=${currentDays}&t=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -300,7 +300,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.range-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        currentDays = parseInt(btn.dataset.range, 10);
+        const days = parseInt(btn.dataset.range, 10);
+        if ([1, 7, 30, 90].includes(days)) currentDays = days;
         load();
       });
     });

@@ -8,7 +8,8 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <title>Ace Data Cloud Status</title>
     <meta name="description" content="Ace Data Cloud — Real-time service status and uptime history." />
-    <link rel="icon" href="./favicon.ico" />
+    <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+    <link rel="apple-touch-icon" href="https://cdn.acedata.cloud/logo.png/thumb_180x_" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -97,10 +98,10 @@
     <main class="max-w-4xl mx-auto px-6 py-10">
 
       <!-- Overall Status Banner -->
-      <div id="overall-banner" class="glass rounded-2xl p-6 mb-8 text-center">
-        <div id="overall-icon" class="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"></div>
-        <h1 id="overall-text" class="text-2xl font-semibold font-display">Loading...</h1>
-        <p id="overall-sub" class="text-sm text-slate-500 dark:text-slate-400 mt-1"></p>
+      <div id="overall-banner" class="glass rounded-2xl p-5 mb-6 text-center">
+        <div id="overall-icon" class="inline-flex items-center justify-center w-10 h-10 rounded-full mb-2"></div>
+        <h1 id="overall-text" class="text-xl font-semibold font-display">Loading...</h1>
+        <p id="overall-sub" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
       </div>
 
       <!-- Time Range Selector -->
@@ -112,7 +113,7 @@
       </div>
 
       <!-- Services -->
-      <div id="services-container" class="space-y-4">
+      <div id="services-container" class="space-y-3">
         <div class="text-center text-slate-400 py-12">
           <div class="inline-block w-6 h-6 border-2 border-slate-300 dark:border-slate-600 border-t-ace-blue rounded-full animate-spin"></div>
           <p class="mt-2 text-sm">Loading status data...</p>
@@ -120,7 +121,7 @@
       </div>
 
       <!-- Legend -->
-      <div class="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-500"></span> Operational</span>
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-yellow-500"></span> Degraded</span>
         <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-orange-500"></span> Partial Outage</span>
@@ -135,6 +136,6 @@
       <p>Powered by <a href="https://acedata.cloud" class="underline hover:text-slate-600 dark:hover:text-slate-300">Ace Data Cloud</a></p>
     </footer>
 
-    <script src="./assets/app.js"></script>
+    <script src="./assets/app.js?v=6"></script>
   </body>
 </html>

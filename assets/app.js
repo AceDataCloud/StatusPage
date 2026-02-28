@@ -29,10 +29,10 @@
     return days;
   }
 
-  function dayStatusFromUptime(uptime, serverErrors) {
-    if (serverErrors === 0) return 'operational';
-    if (uptime >= 99) return 'degraded';
-    if (uptime >= 90) return 'partial_outage';
+  function dayStatusFromUptime(uptime) {
+    if (uptime >= 95) return 'operational';
+    if (uptime >= 80) return 'degraded';
+    if (uptime >= 50) return 'partial_outage';
     return 'major_outage';
   }
 
@@ -114,7 +114,7 @@
       bar.className = 'w-full rounded-sm transition-all duration-150 hover:opacity-80 cursor-pointer';
 
       if (dayData) {
-        const status = dayStatusFromUptime(dayData.uptime, dayData.server_error_count);
+        const status = dayStatusFromUptime(dayData.uptime);
         const barCfg = STATUS_CONFIG[status];
         bar.className += ` ${barCfg.barColor}`;
         bar.style.height = '100%';
@@ -132,9 +132,10 @@
         `;
         wrapper.appendChild(tooltip);
       } else {
-        bar.className += ' bg-slate-200 dark:bg-slate-700';
+        // No data for this day — show as green (operational)
+        bar.className += ' bg-emerald-500';
         bar.style.height = '100%';
-        bar.style.opacity = '0.4';
+        bar.style.opacity = '0.5';
       }
 
       wrapper.appendChild(bar);
@@ -150,7 +151,7 @@
     const lastDate = new Date(allDays[allDays.length - 1]);
     dateLabels.innerHTML = `
       <span>${firstDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-      <span>${formatNumber(service.total_requests_90d)} total requests</span>
+      <span>${service.uptime_90d.toFixed(2)}% uptime</span>
       <span>${lastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
     `;
     card.appendChild(dateLabels);

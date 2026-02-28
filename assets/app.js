@@ -47,14 +47,23 @@
 
   /* ---------- Time slot generators ---------- */
 
-  /** Generate 96 quarter-hour slots for the last 24 hours (local time keys). */
-  function getLast24HourQuarters() {
+  /* ---------- Bucket configs: granularity → (bucketMinutes, numSlots) ---------- */
+  const BUCKET_CONFIG = {
+    'quarter': { minutes: 15,  slots: 96 },
+    '2hour':   { minutes: 120, slots: 84 },
+    '8hour':   { minutes: 480, slots: 90 },
+  };
+
+  /** Generate time-bucketed slots in local time for any bucket size. */
+  function getBucketedSlots(bucketMinutes, numSlots) {
     const slots = [];
     const now = new Date();
-    // Round down to nearest 15 min
-    now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
-    for (let i = 95; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 15 * 60000);
+    // Align to bucket boundary
+    const totalMin = now.getHours() * 60 + now.getMinutes();
+    const alignedMin = Math.floor(totalMin / bucketMinutes) * bucketMinutes;
+    now.setHours(Math.floor(alignedMin / 60), alignedMin % 60, 0, 0);
+    for (let i = numSlots - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * bucketMinutes * 60000);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -77,7 +86,8 @@
   }
 
   function getTimeSlots() {
-    if (currentGranularity === 'quarter') return getLast24HourQuarters();
+    const cfg = BUCKET_CONFIG[currentGranularity];
+    if (cfg) return getBucketedSlots(cfg.minutes, cfg.slots);
     return getLastNDays(currentDays);
   }
 
@@ -103,19 +113,30 @@
     return alias.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
+  /** Whether the current granularity uses time-of-day (not just date). */
+  function isBucketedGranularity() {
+    return !!BUCKET_CONFIG[currentGranularity];
+  }
+
   function formatSlotLabel(slot) {
-    if (currentGranularity === 'quarter') {
-      const hour = parseInt(slot.slice(11, 13), 10);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      return `${h12}${ampm}`;
+    if (isBucketedGranularity()) {
+      // Show date for multi-day views, hour for 24h
+      if (currentGranularity === 'quarter') {
+        const hour = parseInt(slot.slice(11, 13), 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        return `${h12}${ampm}`;
+      }
+      // 2hour / 8hour: show "Feb 28"
+      const d = new Date(slot.slice(0, 10) + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
     const d = new Date(slot + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   function formatTooltipDate(slot) {
-    if (currentGranularity === 'quarter') {
+    if (isBucketedGranularity()) {
       const datePart = new Date(slot.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const hour = parseInt(slot.slice(11, 13), 10);
       const min = slot.slice(14, 16);
@@ -147,7 +168,7 @@
     const allSlots = getTimeSlots();
     const dataMap = {};
     (service.daily || []).forEach(d => {
-      if (currentGranularity === 'quarter') {
+      if (isBucketedGranularity()) {
         // API returns UTC keys like "2026-02-28T08:15"; convert to local-time key
         const utc = new Date(d.date + 'Z');
         const lk = `${utc.getFullYear()}-${String(utc.getMonth()+1).padStart(2,'0')}-${String(utc.getDate()).padStart(2,'0')}T${String(utc.getHours()).padStart(2,'0')}:${String(utc.getMinutes()).padStart(2,'0')}`;

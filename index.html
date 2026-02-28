@@ -60,6 +60,13 @@
         z-index: 50;
       }
       .bar-wrapper:hover .bar-tooltip { display: block; }
+      .range-btn { color: var(--range-text, #64748b); background: transparent; }
+      .range-btn:hover { background: rgba(100,116,139,.08); }
+      .range-btn.active {
+        background: rgba(6,236,163,.12);
+        color: #06eca3;
+      }
+      html.dark .range-btn { --range-text: #94a3b8; }
     </style>
   </head>
   <body class="antialiased text-slate-950 transition-colors duration-200 dark:text-slate-100">
@@ -97,6 +104,13 @@
         <div id="overall-icon" class="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"></div>
         <h1 id="overall-text" class="text-2xl font-semibold font-display">Loading...</h1>
         <p id="overall-sub" class="text-sm text-slate-500 dark:text-slate-400 mt-1"></p>
+      </div>
+
+      <!-- Time Range Selector -->
+      <div class="flex items-center justify-end mb-4 gap-1">
+        <button data-range="1"  class="range-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">24 Hours</button>
+        <button data-range="7"  class="range-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">7 Days</button>
+        <button data-range="90" class="range-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">90 Days</button>
       </div>
 
       <!-- Services -->

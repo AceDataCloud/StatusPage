@@ -2,14 +2,16 @@ name: Update Status Data
 
 on:
   schedule:
-    - cron: "*/2 * * * *" # every 2 minutes
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
-  group: update-data
+  group: update-and-deploy
   cancel-in-progress: true
 
 jobs:
@@ -48,3 +50,28 @@ jobs:
             git commit -m "chore: update status data"
             git push
           fi
+
+  deploy:
+    needs: update
+    if: always() && needs.update.result == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -47,17 +47,20 @@
 
   /* ---------- Time slot generators ---------- */
 
-  function getLast24Hours() {
+  /** Generate 96 quarter-hour slots for the last 24 hours (local time keys). */
+  function getLast24HourQuarters() {
     const slots = [];
     const now = new Date();
-    now.setMinutes(0, 0, 0);
-    for (let i = 23; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 3600000);
+    // Round down to nearest 15 min
+    now.setMinutes(Math.floor(now.getMinutes() / 15) * 15, 0, 0);
+    for (let i = 95; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 15 * 60000);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       const hh = String(d.getHours()).padStart(2, '0');
-      slots.push(`${yyyy}-${mm}-${dd}T${hh}:00`);
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      slots.push(`${yyyy}-${mm}-${dd}T${hh}:${mi}`);
     }
     return slots;
   }
@@ -74,7 +77,7 @@
   }
 
   function getTimeSlots() {
-    if (currentGranularity === 'hourly') return getLast24Hours();
+    if (currentGranularity === 'quarter') return getLast24HourQuarters();
     return getLastNDays(currentDays);
   }
 
@@ -101,7 +104,7 @@
   }
 
   function formatSlotLabel(slot) {
-    if (currentGranularity === 'hourly') {
+    if (currentGranularity === 'quarter') {
       const hour = parseInt(slot.slice(11, 13), 10);
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -112,12 +115,13 @@
   }
 
   function formatTooltipDate(slot) {
-    if (currentGranularity === 'hourly') {
+    if (currentGranularity === 'quarter') {
       const datePart = new Date(slot.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const hour = parseInt(slot.slice(11, 13), 10);
+      const min = slot.slice(14, 16);
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      return `${datePart}, ${h12}${ampm}`;
+      return `${datePart}, ${h12}:${min} ${ampm}`;
     }
     return new Date(slot + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
@@ -143,10 +147,10 @@
     const allSlots = getTimeSlots();
     const dataMap = {};
     (service.daily || []).forEach(d => {
-      if (currentGranularity === 'hourly') {
-        // API returns UTC keys like "2026-02-28T08:00"; convert to local-time key
+      if (currentGranularity === 'quarter') {
+        // API returns UTC keys like "2026-02-28T08:15"; convert to local-time key
         const utc = new Date(d.date + 'Z');
-        const lk = `${utc.getFullYear()}-${String(utc.getMonth()+1).padStart(2,'0')}-${String(utc.getDate()).padStart(2,'0')}T${String(utc.getHours()).padStart(2,'0')}:00`;
+        const lk = `${utc.getFullYear()}-${String(utc.getMonth()+1).padStart(2,'0')}-${String(utc.getDate()).padStart(2,'0')}T${String(utc.getHours()).padStart(2,'0')}:${String(utc.getMinutes()).padStart(2,'0')}`;
         dataMap[lk] = d;
       } else {
         dataMap[d.date] = d;
@@ -176,7 +180,7 @@
 
     // Bar chart
     const barContainer = document.createElement('div');
-    barContainer.className = 'flex items-end h-7 rounded overflow-hidden';
+    barContainer.className = 'flex items-end gap-[1px] h-7';
 
     allSlots.forEach(slot => {
       const slotData = dataMap[slot];
@@ -184,7 +188,7 @@
       wrapper.className = 'bar-wrapper relative flex-1 h-full flex items-end';
 
       const bar = document.createElement('div');
-      bar.className = 'w-full transition-all duration-150 hover:opacity-75 cursor-pointer';
+      bar.className = 'w-full rounded-[2px] transition-all duration-150 hover:opacity-75 cursor-pointer';
 
       if (slotData) {
         const status = dayStatusFromUptime(slotData.uptime);

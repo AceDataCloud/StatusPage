@@ -2,7 +2,7 @@ name: Update Status Data
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # every 5 minutes
+    - cron: '* * * * *'   # every minute (GitHub throttles to ~5 min)
   workflow_dispatch:
 
 permissions:

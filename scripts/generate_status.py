@@ -40,25 +40,40 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 BUCKET_CONFIG = {
-    1: (15, 96, "quarter"),    # 15 min → 96 bars
-    7: (120, 84, "2hour"),     # 2 hours → 84 bars
-    30: (480, 90, "8hour"),    # 8 hours → 90 bars
+    1: (15, 96, "quarter"),  # 15 min → 96 bars
+    7: (120, 84, "2hour"),  # 2 hours → 84 bars
+    30: (480, 90, "8hour"),  # 8 hours → 90 bars
 }
 
 MIN_REQUESTS_BY_DAYS = {90: 200, 30: 70, 7: 16, 1: 3}
 
 EXCLUDED_ALIASES = {
-    "hcaptcha", "recaptcha", "face_change", "identity",
-    "adsl_http_proxy", "shorturl", "localization", "image2text",
-    "chatdoc", "tw", "producer", "drawai", "fish", "qrart", "riffusion",
+    "hcaptcha",
+    "recaptcha",
+    "face_change",
+    "identity",
+    "adsl_http_proxy",
+    "shorturl",
+    "localization",
+    "image2text",
+    "chatdoc",
+    "tw",
+    "producer",
+    "drawai",
+    "fish",
+    "qrart",
+    "riffusion",
 }
 
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+OUTPUT_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
+)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def get_connection():
     return psycopg2.connect(
@@ -138,6 +153,7 @@ def compute_overall(services):
 # Bucketed query (1d / 7d / 30d)
 # ---------------------------------------------------------------------------
 
+
 def generate_bucketed(conn, days):
     bucket_minutes, num_slots, granularity_label = BUCKET_CONFIG[days]
     min_requests = MIN_REQUESTS_BY_DAYS.get(days, 3)
@@ -146,7 +162,11 @@ def generate_bucketed(conn, days):
 
     api_map = build_api_to_service_map(conn)
     if not api_map:
-        return {"overall_status": "No Data", "granularity": granularity_label, "services": []}
+        return {
+            "overall_status": "No Data",
+            "granularity": granularity_label,
+            "services": [],
+        }
 
     api_ids = list(api_map.keys())
     bucket_seconds = bucket_minutes * 60
@@ -178,7 +198,11 @@ def generate_bucketed(conn, days):
         rows = cur.fetchall()
 
     # Merge per-API → per-service
-    bucket_stats = defaultdict(lambda: defaultdict(lambda: {"total": 0, "success": 0, "client_error": 0, "server_error": 0}))
+    bucket_stats = defaultdict(
+        lambda: defaultdict(
+            lambda: {"total": 0, "success": 0, "client_error": 0, "server_error": 0}
+        )
+    )
     service_info = {}
 
     for api_id, bucket_key, total, success, client_error, server_error in rows:
@@ -196,11 +220,17 @@ def generate_bucketed(conn, days):
 
     # Build slot keys (UTC)
     if bucket_minutes <= 60:
-        slot_base = now.replace(minute=(now.minute // bucket_minutes) * bucket_minutes, second=0, microsecond=0)
+        slot_base = now.replace(
+            minute=(now.minute // bucket_minutes) * bucket_minutes,
+            second=0,
+            microsecond=0,
+        )
     else:
         total_min = now.hour * 60 + now.minute
         aligned_min = (total_min // bucket_minutes) * bucket_minutes
-        slot_base = now.replace(hour=aligned_min // 60, minute=aligned_min % 60, second=0, microsecond=0)
+        slot_base = now.replace(
+            hour=aligned_min // 60, minute=aligned_min % 60, second=0, microsecond=0
+        )
 
     all_slot_keys = []
     for i in range(num_slots - 1, -1, -1):
@@ -209,7 +239,9 @@ def generate_bucketed(conn, days):
 
     # Build response
     result = []
-    for sid in sorted(bucket_stats, key=lambda s: service_info.get(s, {}).get("alias", "")):
+    for sid in sorted(
+        bucket_stats, key=lambda s: service_info.get(s, {}).get("alias", "")
+    ):
         info = service_info[sid]
         slots_data = bucket_stats[sid]
 
@@ -228,23 +260,27 @@ def generate_bucketed(conn, days):
                 htotal = h["total"]
                 hnon5xx = htotal - h["server_error"]
                 huptime = round((hnon5xx / htotal) * 100, 3)
-                slot_entries.append({
-                    "date": slot_key,
-                    "total_requests": htotal,
-                    "success_count": h["success"],
-                    "client_error_count": h["client_error"],
-                    "server_error_count": h["server_error"],
-                    "uptime": huptime,
-                })
+                slot_entries.append(
+                    {
+                        "date": slot_key,
+                        "total_requests": htotal,
+                        "success_count": h["success"],
+                        "client_error_count": h["client_error"],
+                        "server_error_count": h["server_error"],
+                        "uptime": huptime,
+                    }
+                )
             else:
-                slot_entries.append({
-                    "date": slot_key,
-                    "total_requests": 0,
-                    "success_count": 0,
-                    "client_error_count": 0,
-                    "server_error_count": 0,
-                    "uptime": None,
-                })
+                slot_entries.append(
+                    {
+                        "date": slot_key,
+                        "total_requests": 0,
+                        "success_count": 0,
+                        "client_error_count": 0,
+                        "server_error_count": 0,
+                        "uptime": None,
+                    }
+                )
 
         # Find most recent bucket with actual data for current status
         current_status = "unknown"
@@ -253,22 +289,29 @@ def generate_bucketed(conn, days):
                 current_status = determine_status(entry["uptime"])
                 break
 
-        result.append({
-            "service_id": sid,
-            "service_alias": info["alias"],
-            "service_title": info["title"],
-            "current_status": current_status,
-            "uptime_90d": uptime_pct,
-            "total_requests_90d": total_all,
-            "daily": slot_entries,
-        })
+        result.append(
+            {
+                "service_id": sid,
+                "service_alias": info["alias"],
+                "service_title": info["title"],
+                "current_status": current_status,
+                "uptime_90d": uptime_pct,
+                "total_requests_90d": total_all,
+                "daily": slot_entries,
+            }
+        )
 
-    return {"overall_status": compute_overall(result), "granularity": granularity_label, "services": result}
+    return {
+        "overall_status": compute_overall(result),
+        "granularity": granularity_label,
+        "services": result,
+    }
 
 
 # ---------------------------------------------------------------------------
 # Daily query (90d) — from pre-aggregated ServiceUptime table
 # ---------------------------------------------------------------------------
+
 
 def generate_daily(conn, days=90):
     min_requests = MIN_REQUESTS_BY_DAYS.get(days, 200)
@@ -288,7 +331,17 @@ def generate_daily(conn, days=90):
 
     # Group by service
     services = {}
-    for sid, alias, title, date, total_req, success, client_err, server_err, uptime in rows:
+    for (
+        sid,
+        alias,
+        title,
+        date,
+        total_req,
+        success,
+        client_err,
+        server_err,
+        uptime,
+    ) in rows:
         if sid not in services:
             services[sid] = {
                 "service_id": sid,
@@ -299,17 +352,19 @@ def generate_daily(conn, days=90):
                 "weighted_uptime_sum": 0.0,
             }
         svc = services[sid]
-        svc["records"].append({
-            "service_id": sid,
-            "service_alias": alias or sid,
-            "service_title": title or "",
-            "date": date.isoformat() if hasattr(date, "isoformat") else str(date),
-            "total_requests": total_req,
-            "success_count": success,
-            "client_error_count": client_err,
-            "server_error_count": server_err,
-            "uptime": float(uptime),
-        })
+        svc["records"].append(
+            {
+                "service_id": sid,
+                "service_alias": alias or sid,
+                "service_title": title or "",
+                "date": date.isoformat() if hasattr(date, "isoformat") else str(date),
+                "total_requests": total_req,
+                "success_count": success,
+                "client_error_count": client_err,
+                "server_error_count": server_err,
+                "uptime": float(uptime),
+            }
+        )
         svc["total_requests"] += total_req
         svc["weighted_uptime_sum"] += float(uptime) * total_req
 
@@ -321,26 +376,37 @@ def generate_daily(conn, days=90):
         if total < min_requests or alias in EXCLUDED_ALIASES:
             continue
 
-        uptime_pct = round(svc["weighted_uptime_sum"] / total, 3) if total > 0 else 100.0
+        uptime_pct = (
+            round(svc["weighted_uptime_sum"] / total, 3) if total > 0 else 100.0
+        )
         recent = svc["records"][-1] if svc["records"] else None
-        current_status = "unknown" if recent is None else determine_status(recent["uptime"])
+        current_status = (
+            "unknown" if recent is None else determine_status(recent["uptime"])
+        )
 
-        result.append({
-            "service_id": sid,
-            "service_alias": alias,
-            "service_title": svc["service_title"],
-            "current_status": current_status,
-            "uptime_90d": uptime_pct,
-            "total_requests_90d": total,
-            "daily": svc["records"],
-        })
+        result.append(
+            {
+                "service_id": sid,
+                "service_alias": alias,
+                "service_title": svc["service_title"],
+                "current_status": current_status,
+                "uptime_90d": uptime_pct,
+                "total_requests_90d": total,
+                "daily": svc["records"],
+            }
+        )
 
-    return {"overall_status": compute_overall(result), "granularity": "daily", "services": result}
+    return {
+        "overall_status": compute_overall(result),
+        "granularity": "daily",
+        "services": result,
+    }
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)

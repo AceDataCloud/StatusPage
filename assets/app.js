@@ -1,57 +1,106 @@
 (() => {
-  const DATA_BASE = './data';
+  const DATA_BASE = "./data";
 
   let currentDays = 1;
-  let currentGranularity = 'daily'; // overridden by API response
+  let currentGranularity = "daily"; // overridden by API response
 
   /* ---------- Service display names (alias → English) ---------- */
   const SERVICE_NAMES = {
-    'aichat': 'AI Chat',
-    'claude': 'Claude AI',
-    'deepseek': 'DeepSeek AI',
-    'flux': 'Flux Image',
-    'gemini': 'Gemini AI',
-    'hailuo': 'Hailuo Video',
-    'headshots': 'AI Headshots',
-    'kimi': 'Kimi AI',
-    'kling': 'Kling Video',
-    'luma': 'Luma Video',
-    'midjourney': 'Midjourney',
-    'nano-banana': 'Nano Banana',
-    'openai': 'OpenAI',
-    'pika': 'Pika Video',
-    'pixverse': 'Pixverse Video',
-    'seedance': 'Seedance Video',
-    'seedream': 'Seedream Image',
-    'serp': 'Web Search',
-    'sora': 'Sora Video',
-    'suno': 'Suno Music',
-    'veo': 'Veo Video',
-    'wan': 'Wan Video',
+    aichat: "AI Chat",
+    claude: "Claude AI",
+    deepseek: "DeepSeek AI",
+    flux: "Flux Image",
+    gemini: "Gemini AI",
+    hailuo: "Hailuo Video",
+    headshots: "AI Headshots",
+    kimi: "Kimi AI",
+    kling: "Kling Video",
+    luma: "Luma Video",
+    midjourney: "Midjourney",
+    "nano-banana": "Nano Banana",
+    openai: "OpenAI",
+    pika: "Pika Video",
+    pixverse: "Pixverse Video",
+    seedance: "Seedance Video",
+    seedream: "Seedream Image",
+    serp: "Web Search",
+    sora: "Sora Video",
+    suno: "Suno Music",
+    veo: "Veo Video",
+    wan: "Wan Video",
   };
 
   const STATUS_CONFIG = {
-    operational:    { label: 'Operational',     barColor: 'bg-emerald-500', dotColor: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' },
-    degraded:       { label: 'Degraded',        barColor: 'bg-yellow-400',  dotColor: 'bg-yellow-400',  textColor: 'text-yellow-600 dark:text-yellow-400' },
-    partial_outage: { label: 'Partial Outage',  barColor: 'bg-orange-500',  dotColor: 'bg-orange-500',  textColor: 'text-orange-600 dark:text-orange-400' },
-    major_outage:   { label: 'Major Outage',    barColor: 'bg-red-500',     dotColor: 'bg-red-500',     textColor: 'text-red-600 dark:text-red-400' },
-    unknown:        { label: 'No Data',         barColor: 'bg-slate-200 dark:bg-slate-700', dotColor: 'bg-slate-400', textColor: 'text-slate-500' },
+    operational: {
+      label: "Operational",
+      barColor: "bg-emerald-500",
+      dotColor: "bg-emerald-500",
+      textColor: "text-emerald-600 dark:text-emerald-400",
+    },
+    degraded: {
+      label: "Degraded",
+      barColor: "bg-yellow-400",
+      dotColor: "bg-yellow-400",
+      textColor: "text-yellow-600 dark:text-yellow-400",
+    },
+    partial_outage: {
+      label: "Partial Outage",
+      barColor: "bg-orange-500",
+      dotColor: "bg-orange-500",
+      textColor: "text-orange-600 dark:text-orange-400",
+    },
+    major_outage: {
+      label: "Major Outage",
+      barColor: "bg-red-500",
+      dotColor: "bg-red-500",
+      textColor: "text-red-600 dark:text-red-400",
+    },
+    unknown: {
+      label: "No Data",
+      barColor: "bg-slate-200 dark:bg-slate-700",
+      dotColor: "bg-slate-400",
+      textColor: "text-slate-500",
+    },
   };
 
   const OVERALL_BANNERS = {
-    'All Systems Operational':  { bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800/50', icon: '\u2713', iconBg: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300' },
-    'Minor Service Disruption': { bg: 'bg-yellow-50 dark:bg-yellow-950/30',  border: 'border-yellow-200 dark:border-yellow-800/50',  icon: '!',      iconBg: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-300' },
-    'Partial System Outage':    { bg: 'bg-orange-50 dark:bg-orange-950/30',  border: 'border-orange-200 dark:border-orange-800/50',  icon: '!',      iconBg: 'bg-orange-500', text: 'text-orange-700 dark:text-orange-300' },
-    'Major System Outage':      { bg: 'bg-red-50 dark:bg-red-950/30',       border: 'border-red-200 dark:border-red-800/50',        icon: '\u2715', iconBg: 'bg-red-500',     text: 'text-red-700 dark:text-red-300' },
+    "All Systems Operational": {
+      bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      border: "border-emerald-200 dark:border-emerald-800/50",
+      icon: "\u2713",
+      iconBg: "bg-emerald-500",
+      text: "text-emerald-700 dark:text-emerald-300",
+    },
+    "Minor Service Disruption": {
+      bg: "bg-yellow-50 dark:bg-yellow-950/30",
+      border: "border-yellow-200 dark:border-yellow-800/50",
+      icon: "!",
+      iconBg: "bg-yellow-500",
+      text: "text-yellow-700 dark:text-yellow-300",
+    },
+    "Partial System Outage": {
+      bg: "bg-orange-50 dark:bg-orange-950/30",
+      border: "border-orange-200 dark:border-orange-800/50",
+      icon: "!",
+      iconBg: "bg-orange-500",
+      text: "text-orange-700 dark:text-orange-300",
+    },
+    "Major System Outage": {
+      bg: "bg-red-50 dark:bg-red-950/30",
+      border: "border-red-200 dark:border-red-800/50",
+      icon: "\u2715",
+      iconBg: "bg-red-500",
+      text: "text-red-700 dark:text-red-300",
+    },
   };
 
   /* ---------- Time slot generators ---------- */
 
   /* ---------- Bucket configs: granularity → (bucketMinutes, numSlots) ---------- */
   const BUCKET_CONFIG = {
-    'quarter': { minutes: 15,  slots: 96 },
-    '2hour':   { minutes: 120, slots: 84 },
-    '8hour':   { minutes: 480, slots: 90 },
+    quarter: { minutes: 15, slots: 96 },
+    "2hour": { minutes: 120, slots: 84 },
+    "8hour": { minutes: 480, slots: 90 },
   };
 
   /** Generate time-bucketed slots in local time for any bucket size. */
@@ -65,10 +114,10 @@
     for (let i = numSlots - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * bucketMinutes * 60000);
       const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mi = String(d.getMinutes()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
       slots.push(`${yyyy}-${mm}-${dd}T${hh}:${mi}`);
     }
     return slots;
@@ -81,8 +130,8 @@
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
       days.push(`${yyyy}-${mm}-${dd}`);
     }
     return days;
@@ -97,10 +146,10 @@
   /* ---------- Helpers ---------- */
 
   function dayStatusFromUptime(uptime) {
-    if (uptime >= 95) return 'operational';
-    if (uptime >= 80) return 'degraded';
-    if (uptime >= 50) return 'partial_outage';
-    return 'major_outage';
+    if (uptime >= 95) return "operational";
+    if (uptime >= 80) return "degraded";
+    if (uptime >= 50) return "partial_outage";
+    return "major_outage";
   }
 
   function getServiceName(alias, rawTitle) {
@@ -109,11 +158,18 @@
     if (rawTitle) {
       const m = rawTitle.match(/^\$t\((.+)\)$/);
       if (m) {
-        return m[1].replace(/^service_title_/, '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        return m[1]
+          .replace(/^service_title_/, "")
+          .split("_")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
       }
     }
     // Capitalize alias as fallback
-    return alias.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return alias
+      .split(/[-_]/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
   }
 
   /** Whether the current granularity uses time-of-day (not just date). */
@@ -124,40 +180,47 @@
   function formatSlotLabel(slot) {
     if (isBucketedGranularity()) {
       // Show date for multi-day views, hour for 24h
-      if (currentGranularity === 'quarter') {
+      if (currentGranularity === "quarter") {
         const hour = parseInt(slot.slice(11, 13), 10);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const ampm = hour >= 12 ? "PM" : "AM";
         const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
         return `${h12}${ampm}`;
       }
       // 2hour / 8hour: show "Feb 28"
-      const d = new Date(slot.slice(0, 10) + 'T00:00:00');
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const d = new Date(slot.slice(0, 10) + "T00:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     }
-    const d = new Date(slot + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const d = new Date(slot + "T00:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
   function formatTooltipDate(slot) {
     if (isBucketedGranularity()) {
-      const datePart = new Date(slot.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const datePart = new Date(
+        slot.slice(0, 10) + "T00:00:00",
+      ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
       const hour = parseInt(slot.slice(11, 13), 10);
       const min = slot.slice(14, 16);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const ampm = hour >= 12 ? "PM" : "AM";
       const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
       return `${datePart}, ${h12}:${min} ${ampm}`;
     }
-    return new Date(slot + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return new Date(slot + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
   }
 
   /* ---------- Rendering ---------- */
 
   function renderBanner(overallStatus) {
-    const banner = document.getElementById('overall-banner');
-    const iconEl = document.getElementById('overall-icon');
-    const textEl = document.getElementById('overall-text');
-    const subEl  = document.getElementById('overall-sub');
-    const cfg = OVERALL_BANNERS[overallStatus] || OVERALL_BANNERS['All Systems Operational'];
+    const banner = document.getElementById("overall-banner");
+    const iconEl = document.getElementById("overall-icon");
+    const textEl = document.getElementById("overall-text");
+    const subEl = document.getElementById("overall-sub");
+    const cfg =
+      OVERALL_BANNERS[overallStatus] ||
+      OVERALL_BANNERS["All Systems Operational"];
 
     banner.className = `rounded-2xl p-5 mb-6 text-center border ${cfg.bg} ${cfg.border}`;
     iconEl.className = `inline-flex items-center justify-center w-10 h-10 rounded-full mb-2 text-white font-bold text-lg ${cfg.iconBg}`;
@@ -170,11 +233,11 @@
   function renderService(service) {
     const allSlots = getTimeSlots();
     const dataMap = {};
-    (service.daily || []).forEach(d => {
+    (service.daily || []).forEach((d) => {
       if (isBucketedGranularity()) {
         // API returns UTC keys like "2026-02-28T08:15"; convert to local-time key
-        const utc = new Date(d.date + 'Z');
-        const lk = `${utc.getFullYear()}-${String(utc.getMonth()+1).padStart(2,'0')}-${String(utc.getDate()).padStart(2,'0')}T${String(utc.getHours()).padStart(2,'0')}:${String(utc.getMinutes()).padStart(2,'0')}`;
+        const utc = new Date(d.date + "Z");
+        const lk = `${utc.getFullYear()}-${String(utc.getMonth() + 1).padStart(2, "0")}-${String(utc.getDate()).padStart(2, "0")}T${String(utc.getHours()).padStart(2, "0")}:${String(utc.getMinutes()).padStart(2, "0")}`;
         dataMap[lk] = d;
       } else {
         dataMap[d.date] = d;
@@ -184,12 +247,12 @@
     const cfg = STATUS_CONFIG[service.current_status] || STATUS_CONFIG.unknown;
     const title = getServiceName(service.service_alias, service.service_title);
 
-    const card = document.createElement('div');
-    card.className = 'glass rounded-xl px-4 py-3';
+    const card = document.createElement("div");
+    card.className = "glass rounded-xl px-4 py-3";
 
     // Header
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between mb-2';
+    const header = document.createElement("div");
+    header.className = "flex items-center justify-between mb-2";
     header.innerHTML = `
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full ${cfg.dotColor}"></span>
@@ -203,40 +266,44 @@
     card.appendChild(header);
 
     // Bar chart
-    const barContainer = document.createElement('div');
-    barContainer.className = 'flex items-end gap-[1px] h-7';
+    const barContainer = document.createElement("div");
+    barContainer.className = "flex items-end gap-[1px] h-7";
 
-    allSlots.forEach(slot => {
+    allSlots.forEach((slot) => {
       const slotData = dataMap[slot];
-      const wrapper = document.createElement('div');
-      wrapper.className = 'bar-wrapper relative flex-1 h-full flex items-end';
+      const wrapper = document.createElement("div");
+      wrapper.className = "bar-wrapper relative flex-1 h-full flex items-end";
 
-      const bar = document.createElement('div');
-      bar.className = 'w-full rounded-[2px] transition-all duration-150 hover:opacity-75 cursor-pointer';
+      const bar = document.createElement("div");
+      bar.className =
+        "w-full rounded-[2px] transition-all duration-150 hover:opacity-75 cursor-pointer";
 
-      const isNoData = !slotData || slotData.total_requests === 0 || slotData.uptime === null;
+      const isNoData =
+        !slotData || slotData.total_requests === 0 || slotData.uptime === null;
 
       if (!isNoData) {
         const status = dayStatusFromUptime(slotData.uptime);
         const barCfg = STATUS_CONFIG[status];
         bar.className += ` ${barCfg.barColor}`;
-        bar.style.height = '100%';
+        bar.style.height = "100%";
 
-        const tooltip = document.createElement('div');
-        tooltip.className = 'bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg';
+        const tooltip = document.createElement("div");
+        tooltip.className =
+          "bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg";
         tooltip.innerHTML = `
           <div class="font-medium">${formatTooltipDate(slot)}</div>
           <div>${slotData.uptime.toFixed(2)}% uptime</div>
-          ${slotData.server_error_count > 0 ? `<div class="text-red-400 dark:text-red-600">${slotData.server_error_count} errors</div>` : ''}
+          ${slotData.server_error_count > 0 ? `<div class="text-red-400 dark:text-red-600">${slotData.server_error_count} errors</div>` : ""}
         `;
         wrapper.appendChild(tooltip);
       } else {
         // No data for this time slot
         bar.className += ` ${STATUS_CONFIG.unknown.barColor}`;
-        bar.style.height = '100%';
+        bar.style.height = "100%";
 
-        const tooltip = document.createElement('div');
-        tooltip.className = 'bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg';
+        const tooltip = document.createElement("div");
+        tooltip.className =
+          "bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg";
         tooltip.innerHTML = `<div class="font-medium">${formatTooltipDate(slot)}</div><div>No data</div>`;
         wrapper.appendChild(tooltip);
       }
@@ -248,8 +315,9 @@
     card.appendChild(barContainer);
 
     // Date labels
-    const dateLabels = document.createElement('div');
-    dateLabels.className = 'flex justify-between mt-1 text-[10px] text-slate-400 dark:text-slate-500';
+    const dateLabels = document.createElement("div");
+    dateLabels.className =
+      "flex justify-between mt-1 text-[10px] text-slate-400 dark:text-slate-500";
     dateLabels.innerHTML = `
       <span>${formatSlotLabel(allSlots[0])}</span>
       <span>${service.uptime_90d.toFixed(2)}% uptime</span>
@@ -261,7 +329,7 @@
   }
 
   function renderError(message) {
-    document.getElementById('services-container').innerHTML = `
+    document.getElementById("services-container").innerHTML = `
       <div class="text-center py-10 text-slate-400">
         <p class="text-base font-medium">Unable to load status data</p>
         <p class="text-sm mt-1">${message}</p>
@@ -271,45 +339,49 @@
   }
 
   function updateRangeButtons() {
-    document.querySelectorAll('.range-btn').forEach(btn => {
+    document.querySelectorAll(".range-btn").forEach((btn) => {
       const range = parseInt(btn.dataset.range, 10);
-      btn.classList.toggle('active', range === currentDays);
+      btn.classList.toggle("active", range === currentDays);
     });
   }
 
   async function load() {
     try {
-      const res = await fetch(`${DATA_BASE}/status_${currentDays}.json?t=${Date.now()}`);
+      const res = await fetch(
+        `${DATA_BASE}/status_${currentDays}.json?t=${Date.now()}`,
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       // Use API-provided granularity; fallback to daily if not present
-      currentGranularity = data.granularity || 'daily';
+      currentGranularity = data.granularity || "daily";
 
       renderBanner(data.overall_status);
       updateRangeButtons();
 
-      const container = document.getElementById('services-container');
-      container.innerHTML = '';
+      const container = document.getElementById("services-container");
+      container.innerHTML = "";
 
       if (!data.services || data.services.length === 0) {
-        container.innerHTML = '<p class="text-center text-slate-400 py-10">No services are being monitored yet.</p>';
+        container.innerHTML =
+          '<p class="text-center text-slate-400 py-10">No services are being monitored yet.</p>';
         return;
       }
 
       data.services
-        .sort((a, b) => (a.service_alias || '').localeCompare(b.service_alias || ''))
-        .forEach(svc => container.appendChild(renderService(svc)));
-
+        .sort((a, b) =>
+          (a.service_alias || "").localeCompare(b.service_alias || ""),
+        )
+        .forEach((svc) => container.appendChild(renderService(svc)));
     } catch (err) {
-      console.error('Failed to load status:', err);
+      console.error("Failed to load status:", err);
       renderError(err.message);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.range-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".range-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
         currentDays = parseInt(btn.dataset.range, 10);
         load();
       });

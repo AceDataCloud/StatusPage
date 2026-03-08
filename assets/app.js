@@ -80,7 +80,10 @@
     for (let i = n - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      days.push(d.toISOString().slice(0, 10));
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      days.push(`${yyyy}-${mm}-${dd}`);
     }
     return days;
   }
@@ -211,7 +214,9 @@
       const bar = document.createElement('div');
       bar.className = 'w-full rounded-[2px] transition-all duration-150 hover:opacity-75 cursor-pointer';
 
-      if (slotData) {
+      const isNoData = !slotData || slotData.total_requests === 0 || slotData.uptime === null;
+
+      if (!isNoData) {
         const status = dayStatusFromUptime(slotData.uptime);
         const barCfg = STATUS_CONFIG[status];
         bar.className += ` ${barCfg.barColor}`;
@@ -226,9 +231,14 @@
         `;
         wrapper.appendChild(tooltip);
       } else {
-        // No data — treat as 100% operational
-        bar.className += ' bg-emerald-500';
+        // No data for this time slot
+        bar.className += ` ${STATUS_CONFIG.unknown.barColor}`;
         bar.style.height = '100%';
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg';
+        tooltip.innerHTML = `<div class="font-medium">${formatTooltipDate(slot)}</div><div>No data</div>`;
+        wrapper.appendChild(tooltip);
       }
 
       wrapper.appendChild(bar);

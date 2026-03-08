@@ -243,11 +243,15 @@ def generate_bucketed(conn, days):
                     "success_count": 0,
                     "client_error_count": 0,
                     "server_error_count": 0,
-                    "uptime": 100.0,
+                    "uptime": None,
                 })
 
-        recent = slot_entries[-1] if slot_entries else None
-        current_status = "unknown" if recent is None else determine_status(recent["uptime"])
+        # Find most recent bucket with actual data for current status
+        current_status = "unknown"
+        for entry in reversed(slot_entries):
+            if entry["total_requests"] > 0 and entry["uptime"] is not None:
+                current_status = determine_status(entry["uptime"])
+                break
 
         result.append({
             "service_id": sid,

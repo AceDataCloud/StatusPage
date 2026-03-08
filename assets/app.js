@@ -57,9 +57,9 @@
     },
     unknown: {
       label: "No Data",
-      barColor: "bg-slate-200 dark:bg-slate-700",
-      dotColor: "bg-slate-400",
-      textColor: "text-slate-500",
+      barColor: "bg-emerald-500",
+      dotColor: "bg-emerald-500",
+      textColor: "text-emerald-600 dark:text-emerald-400",
     },
   };
 
@@ -230,19 +230,23 @@
     subEl.textContent = `Last updated: ${new Date().toLocaleString()}`;
   }
 
+  /** Convert a data entry's date to a local-time display key. */
+  function entryToLocalSlot(dateStr) {
+    if (isBucketedGranularity()) {
+      // Data dates are UTC — convert to local time
+      const utc = new Date(dateStr + "Z");
+      const yyyy = utc.getFullYear();
+      const mm = String(utc.getMonth() + 1).padStart(2, "0");
+      const dd = String(utc.getDate()).padStart(2, "0");
+      const hh = String(utc.getHours()).padStart(2, "0");
+      const mi = String(utc.getMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    }
+    return dateStr; // daily dates are already date-only strings
+  }
+
   function renderService(service) {
-    const allSlots = getTimeSlots();
-    const dataMap = {};
-    (service.daily || []).forEach((d) => {
-      if (isBucketedGranularity()) {
-        // API returns UTC keys like "2026-02-28T08:15"; convert to local-time key
-        const utc = new Date(d.date + "Z");
-        const lk = `${utc.getFullYear()}-${String(utc.getMonth() + 1).padStart(2, "0")}-${String(utc.getDate()).padStart(2, "0")}T${String(utc.getHours()).padStart(2, "0")}:${String(utc.getMinutes()).padStart(2, "0")}`;
-        dataMap[lk] = d;
-      } else {
-        dataMap[d.date] = d;
-      }
-    });
+    const entries = service.daily || [];
 
     const cfg = STATUS_CONFIG[service.current_status] || STATUS_CONFIG.unknown;
     const title = getServiceName(service.service_alias, service.service_title);
@@ -265,12 +269,12 @@
     `;
     card.appendChild(header);
 
-    // Bar chart
+    // Bar chart — iterate directly over data entries to avoid timezone key mismatch
     const barContainer = document.createElement("div");
     barContainer.className = "flex items-end gap-[1px] h-7";
 
-    allSlots.forEach((slot) => {
-      const slotData = dataMap[slot];
+    entries.forEach((entry) => {
+      const slot = entryToLocalSlot(entry.date);
       const wrapper = document.createElement("div");
       wrapper.className = "bar-wrapper relative flex-1 h-full flex items-end";
 
@@ -279,10 +283,10 @@
         "w-full rounded-[2px] transition-all duration-150 hover:opacity-75 cursor-pointer";
 
       const isNoData =
-        !slotData || slotData.total_requests === 0 || slotData.uptime === null;
+        entry.total_requests === 0 || entry.uptime === null;
 
       if (!isNoData) {
-        const status = dayStatusFromUptime(slotData.uptime);
+        const status = dayStatusFromUptime(entry.uptime);
         const barCfg = STATUS_CONFIG[status];
         bar.className += ` ${barCfg.barColor}`;
         bar.style.height = "100%";
@@ -292,12 +296,12 @@
           "bar-tooltip px-2 py-1 rounded-md text-[11px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg";
         tooltip.innerHTML = `
           <div class="font-medium">${formatTooltipDate(slot)}</div>
-          <div>${slotData.uptime.toFixed(2)}% uptime</div>
-          ${slotData.server_error_count > 0 ? `<div class="text-red-400 dark:text-red-600">${slotData.server_error_count} errors</div>` : ""}
+          <div>${entry.uptime.toFixed(2)}% uptime</div>
+          ${entry.server_error_count > 0 ? `<div class="text-red-400 dark:text-red-600">${entry.server_error_count} errors</div>` : ""}
         `;
         wrapper.appendChild(tooltip);
       } else {
-        // No data for this time slot
+        // No data for this time slot — show green (operational appearance)
         bar.className += ` ${STATUS_CONFIG.unknown.barColor}`;
         bar.style.height = "100%";
 
@@ -314,14 +318,16 @@
 
     card.appendChild(barContainer);
 
-    // Date labels
+    // Date labels from first/last data entries
+    const firstSlot = entries.length > 0 ? entryToLocalSlot(entries[0].date) : "";
+    const lastSlot = entries.length > 0 ? entryToLocalSlot(entries[entries.length - 1].date) : "";
     const dateLabels = document.createElement("div");
     dateLabels.className =
       "flex justify-between mt-1 text-[10px] text-slate-400 dark:text-slate-500";
     dateLabels.innerHTML = `
-      <span>${formatSlotLabel(allSlots[0])}</span>
+      <span>${firstSlot ? formatSlotLabel(firstSlot) : ""}</span>
       <span>${service.uptime_90d.toFixed(2)}% uptime</span>
-      <span>${formatSlotLabel(allSlots[allSlots.length - 1])}</span>
+      <span>${lastSlot ? formatSlotLabel(lastSlot) : ""}</span>
     `;
     card.appendChild(dateLabels);
 

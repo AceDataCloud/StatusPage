@@ -4,11 +4,15 @@
   let currentDays = 1;
   let currentGranularity = "daily"; // overridden by API response
 
+  /* ---------- Services hidden from the public status page ---------- */
+  // Services in this set are filtered out before rendering. The backend
+  // continues to monitor them; only public display is suppressed.
+  const HIDDEN_SERVICES = new Set(["deepseek"]);
+
   /* ---------- Service display names (alias → English) ---------- */
   const SERVICE_NAMES = {
     aichat: "AI Chat",
     claude: "Claude AI",
-    deepseek: "DeepSeek AI",
     flux: "Flux Image",
     gemini: "Gemini AI",
     hailuo: "Hailuo Video",
@@ -375,6 +379,7 @@
       }
 
       data.services
+        .filter((svc) => !HIDDEN_SERVICES.has(svc.service_alias))
         .sort((a, b) =>
           (a.service_alias || "").localeCompare(b.service_alias || ""),
         )

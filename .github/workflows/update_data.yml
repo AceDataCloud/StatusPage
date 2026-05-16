@@ -2,7 +2,11 @@ name: Update Status Data
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # Every 30 minutes. Previously */5, which fired ~288 times/day and was the
+    # single biggest consumer of the org's GitHub Actions minute budget. Status
+    # data lag of <=30min is acceptable for the public status page; run manually
+    # via workflow_dispatch when fresher data is needed.
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:

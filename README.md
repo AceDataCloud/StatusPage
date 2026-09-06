@@ -1,28 +1,52 @@
 # StatusPage
 
-Static status page for Ace Data Cloud services, hosted at `status.acedata.cloud`.
+Observed API availability for Ace Data Cloud services.
 
 ## Architecture
 
-- **Data source**: `ServiceUptime` table in PlatformBackend (pre-aggregated from `ApiUsage`)
-- **API**: `GET /api/v1/status/` on PlatformBackend (public, no auth)
-- **Frontend**: Static HTML + Tailwind CSS + vanilla JS (this project)
-- **Aggregation**: CronJob `health.py` runs hourly, aggregates ApiUsage → ServiceUptime
+```text
+PlatformBackend bounded aggregation
+  -> authenticated public-edge snapshot endpoint
+  -> scheduled Cloudflare Worker
+  -> one atomic Workers KV document
+  -> Pages Function /data/status_{1,7,30,90}.json
+  -> static Cloudflare Pages UI
+```
 
-## How It Works
+The Worker has no database credentials. A failed refresh never overwrites the last good KV document. If KV is unavailable, the Pages Function serves a sanitized checked-in fallback and marks it stale.
 
-1. CronJob `health.py` (in PlatformBackend) runs every hour
-2. It reads `ApiUsage` records from the past 2 days
-3. Groups by (service, date), counts success/error rates
-4. Upserts into `ServiceUptime` table
-5. This static page fetches `/api/v1/status/` and renders 90-day uptime bars
+The page reports outcomes observed from completed API traffic. No traffic is shown as `No Data`; it is not treated as proof that a service is operational.
 
-## Development
+## Local verification
 
-Just open `index.html` in a browser. The page fetches live data from the API.
+```bash
+npm install
+npm test
+node scripts/sanitize-fallback.mjs
+```
 
-## Deployment
+Open `public/index.html` through a local static server. The production data paths are handled by the Pages Function.
 
-Deployed via GitHub Pages. Push to `main` triggers the deploy workflow.
+## Cloudflare configuration
 
-DNS: `status.acedata.cloud` → GitHub Pages CNAME.
+The scheduled Worker needs:
+
+- `STATUS_SNAPSHOT_KV_ID` at build time
+- `BACKEND_STATUS_URL` at build time
+- `STATUSPAGE_INTERNAL_TOKEN` as a Worker runtime secret
+- `CLOUDFLARE_ACCOUNT_ID` and a narrowly scoped API token in Workers Builds
+
+The Pages project publishes `public/`, enables Functions, and binds the same KV namespace as `STATUS_SNAPSHOT`. Production deploys from `main`; pull requests use preview deployments.
+
+Do not commit generated Wrangler configuration or secrets. `scripts/generate-worker-config.mjs` creates `.wrangler.generated.jsonc` only inside the build environment.
+
+## Refresh and freshness
+
+- PlatformBackend completes one aggregate bucket every 15 minutes.
+- The scheduled Worker runs two minutes later at `04,19,34,49` UTC minutes.
+- The page refreshes once per minute using normal HTTP caching and ETags.
+- Snapshots older than the backend freshness threshold are visibly marked delayed.
+
+## Rollback
+
+`status.acedata.cloud` remains on GitHub Pages until Cloudflare shadow validation passes. After cutover, restore the previous DNSPod CNAME to `acedatacloud.github.io` to roll back the frontend. The manual `Deploy GitHub Pages Fallback` workflow publishes only `public/`; it never connects to PostgreSQL or generates data.

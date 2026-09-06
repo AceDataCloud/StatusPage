@@ -1,4 +1,5 @@
-import { CURRENT_KEY, publicRange, responseEtag, validateSnapshot } from '../../src/snapshot.mjs';
+import { PUBLIC_FALLBACKS } from '../../src/fallback.mjs';
+import { CURRENT_KEY, publicRange, responseEtag, validatePublicPayload, validateSnapshot } from '../../src/snapshot.mjs';
 
 const CORS = Object.freeze({ 'Access-Control-Allow-Origin': '*' });
 
@@ -22,19 +23,19 @@ export async function onRequestGet(context) {
     console.error(JSON.stringify({ event: 'status_kv_read_failed', error: String(error) }));
     fallback = true;
   }
-  if (!snapshot) {
-    const response = await context.env.ASSETS.fetch(new URL('/fallback/current.json', context.request.url));
-    if (!response.ok) return new Response('Status snapshot unavailable', { status: 503, headers: CORS });
-    snapshot = await response.json();
-    fallback = true;
-  }
+  let payload;
   try {
-    validateSnapshot(snapshot, Date.now(), { allowStale: true });
+    if (!snapshot) {
+      payload = validatePublicPayload(structuredClone(PUBLIC_FALLBACKS[String(days)]));
+      fallback = true;
+    } else {
+      validateSnapshot(snapshot, Date.now(), { allowStale: true });
+      payload = publicRange(snapshot, days);
+    }
   } catch (error) {
     console.error(JSON.stringify({ event: 'status_serve_validation_failed', error: String(error) }));
     return new Response('Status snapshot unavailable', { status: 503, headers: CORS });
   }
-  const payload = publicRange(snapshot, days);
   if (fallback) payload.stale = true;
   const etag = responseEtag(payload);
   if (context.request.headers.get('if-none-match') === etag) {

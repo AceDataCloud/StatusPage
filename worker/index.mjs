@@ -14,10 +14,11 @@ export async function refreshSnapshot(env, fetchImpl = fetch, now = Date.now(), 
   try {
     response = await fetchImpl(env.BACKEND_STATUS_URL, {
       headers,
-      redirect: 'error',
+      redirect: 'manual',
       signal: controller.signal
     });
     if (response.status === 304) return { updated: false, reason: 'not-modified' };
+    if (response.status >= 300 && response.status < 400) throw new Error('status backend redirect was rejected');
     if (!response.ok) throw new Error(`status backend returned ${response.status}`);
     const contentLength = Number(response.headers.get('content-length') || 0);
     if (contentLength > MAX_SNAPSHOT_BYTES) throw new Error('snapshot is too large');

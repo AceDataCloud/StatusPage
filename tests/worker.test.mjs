@@ -15,6 +15,7 @@ test('stores one complete validated snapshot', async () => {
   const value = snapshot(now);
   const result = await refreshSnapshot(env(store), async (_url, init) => {
     assert.equal(init.headers['X-Internal-Token'], 'secret');
+    assert.equal(init.redirect, 'manual');
     return new Response(JSON.stringify(value), { status: 200, headers: { ETag: 'backend-etag' } });
   }, now);
   assert.equal(result.updated, true);
@@ -66,4 +67,15 @@ test('authenticated refresh accepts an old rollback snapshot and preserves stale
   const result = await refreshSnapshot(env(store), async () => Response.json(rollback), now);
   assert.equal(result.updated, true);
   assert.equal(JSON.parse(store.state().value).generation, rollback.generation);
+});
+
+
+test('redirect responses are rejected without overwriting KV', async () => {
+  const original = JSON.stringify(snapshot(now));
+  const store = kv(original);
+  await assert.rejects(
+    () => refreshSnapshot(env(store), async () => new Response(null, { status: 302, headers: { Location: 'https://example.com/' } }), now),
+    /redirect was rejected/
+  );
+  assert.equal(store.state().value, original);
 });

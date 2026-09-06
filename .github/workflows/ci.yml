@@ -1,0 +1,24 @@
+name: check-pr
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - run: npx wrangler deploy --config wrangler.jsonc --dry-run --outdir /tmp/status-worker-build
+      - run: npx wrangler pages functions build --outdir /tmp/status-pages-functions

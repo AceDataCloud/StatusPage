@@ -1,0 +1,12 @@
+{
+  "name": "acedatacloud-status-page",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "deploy:worker": "node scripts/generate-worker-config.mjs && wrangler deploy --config .wrangler.generated.jsonc"
+  },
+  "devDependencies": {
+    "wrangler": "4.127.1"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "acedatacloud-status-refresh",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-08-01",
+  "triggers": {
+    "crons": ["4,19,34,49 * * * *"]
+  }
+}

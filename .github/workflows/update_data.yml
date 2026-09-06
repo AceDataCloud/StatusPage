@@ -1,69 +1,25 @@
-name: Update Status Data
+name: Deploy GitHub Pages Fallback
 
 on:
-  schedule:
-    # Every 30 minutes. Previously */5, which fired ~288 times/day and was the
-    # single biggest consumer of the org's GitHub Actions minute budget. Status
-    # data lag of <=30min is acceptable for the public status page; run manually
-    # via workflow_dispatch when fresher data is needed.
-    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
-  group: update-and-deploy
+  group: deploy-status-fallback
   cancel-in-progress: true
 
 jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install psycopg2-binary
-
-      - name: Generate status data from DB
-        env:
-          PGSQL_HOST: ${{ secrets.PGSQL_HOST }}
-          PGSQL_PORT: ${{ secrets.PGSQL_PORT }}
-          PGSQL_USER: ${{ secrets.PGSQL_USER }}
-          PGSQL_PASSWORD: ${{ secrets.PGSQL_PASSWORD }}
-          PGSQL_DATABASE: acedatacloud_platform
-        run: python scripts/generate_status.py
-
-      - name: Commit & push if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/
-          if git diff --cached --quiet; then
-            echo "No data changes, skip commit"
-          else
-            git pull --rebase origin main || true
-            git commit -m "chore: update status data"
-            git push
-          fi
-
   deploy:
-    needs: update
-    if: always() && needs.update.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout main fallback
         uses: actions/checkout@v4
         with:
           ref: main
@@ -71,11 +27,14 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages artifact
+      - name: Materialize compatibility data paths
+        run: node scripts/materialize-fallback.mjs
+
+      - name: Upload sanitized fallback
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: public
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

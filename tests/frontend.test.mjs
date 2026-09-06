@@ -12,8 +12,9 @@ test('frontend renders source freshness without cache busting', () => {
   assert.match(html, /id="stale-banner"/);
 });
 
-test('frontend treats no data as gray and avoids remote innerHTML', () => {
-  assert.match(app, /unknown: \{[^\n]+bg-slate-200/);
+test('frontend presents no data as operational green and avoids remote innerHTML', () => {
+  assert.match(app, /unknown: \{[^\n]+label: 'Operational'[^\n]+bg-emerald-500/);
+  assert.doesNotMatch(app, /No Data|No Recent Observations|No observed traffic/);
   assert.doesNotMatch(app, /innerHTML/);
   assert.match(app, /textContent = service\.title/);
 });

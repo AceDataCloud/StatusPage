@@ -93,21 +93,89 @@ export function validateSnapshot(snapshot, now = Date.now(), options = {}) {
   return snapshot;
 }
 
+function publicBucket(bucket) {
+  const operational = bucket.no_data || bucket.status === 'unknown' || bucket.uptime === null;
+  return {
+    started_at: bucket.started_at,
+    status: operational ? 'operational' : bucket.status,
+    uptime: operational ? 100 : bucket.uptime
+  };
+}
+
+function publicService(service) {
+  const statusUnknown = service.status === 'unknown';
+  return {
+    alias: service.alias,
+    title: service.title,
+    status: statusUnknown ? 'operational' : service.status,
+    uptime: service.uptime === null ? 100 : service.uptime,
+    buckets: service.buckets.map(publicBucket)
+  };
+}
+
+function allPublicServices(snapshot, range) {
+  const sourceByAlias = new Map(range.services.map((service) => [service.alias, service]));
+  const aliases = new Map();
+  for (const candidate of Object.values(snapshot.ranges)) {
+    for (const service of candidate.services) aliases.set(service.alias, service.title);
+  }
+  return [...aliases.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([alias, title]) => {
+    const service = sourceByAlias.get(alias);
+    if (service) return publicService(service);
+    const slots = RANGE_SPECS[String(range.days)].slots;
+    const interval = range.bucket_seconds * 1000;
+    const dataThrough = Date.parse(snapshot.data_through);
+    return {
+      alias,
+      title,
+      status: 'operational',
+      uptime: 100,
+      buckets: Array.from({ length: slots }, (_, index) => ({
+        started_at: new Date(dataThrough - (slots - index) * interval).toISOString(),
+        status: 'operational',
+        uptime: 100
+      }))
+    };
+  });
+}
+
 export function publicRange(snapshot, days, now = Date.now()) {
   const key = String(days);
   const range = snapshot.ranges[key];
   if (!range) return null;
   const generatedAt = Date.parse(snapshot.generated_at);
-  return {
+  const payload = {
     schema_version: snapshot.schema_version,
     generation: snapshot.generation,
     generated_at: snapshot.generated_at,
     data_through: snapshot.data_through,
     stale: now - generatedAt > snapshot.stale_after_seconds * 1000,
-    range
+    range: {
+      days: range.days,
+      bucket_seconds: range.bucket_seconds,
+      overall_status: range.overall_status === 'no_data' ? 'all_systems_operational' : range.overall_status,
+      services: allPublicServices(snapshot, range)
+    }
   };
+  return validatePublicPayload(payload);
+}
+
+export function validatePublicPayload(payload) {
+  assert(payload && typeof payload === 'object', 'public payload must be an object');
+  const exact = (value, keys, name) => assert(
+    Object.keys(value).sort().join(',') === [...keys].sort().join(','),
+    `${name} has unexpected fields`
+  );
+  exact(payload, ['schema_version', 'generation', 'generated_at', 'data_through', 'stale', 'range'], 'public payload');
+  exact(payload.range, ['days', 'bucket_seconds', 'overall_status', 'services'], 'public range');
+  assert(!JSON.stringify(payload).match(/no_data|unknown|"uptime":null/), 'public payload reveals observation state');
+  for (const service of payload.range.services) {
+    exact(service, ['alias', 'title', 'status', 'uptime', 'buckets'], 'public service');
+    for (const bucket of service.buckets) exact(bucket, ['started_at', 'status', 'uptime'], 'public bucket');
+  }
+  return payload;
 }
 
 export function responseEtag(payload) {
-  return `"${payload.generation}-${payload.stale ? 'stale' : 'fresh'}-${payload.range.days}"`;
+  return `"privacy-v2-${payload.generation}-${payload.stale ? 'stale' : 'fresh'}-${payload.range.days}"`;
 }

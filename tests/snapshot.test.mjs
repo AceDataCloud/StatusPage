@@ -40,8 +40,8 @@ test('freshness is included in the ETag', () => {
 
 
 test('sanitized fallback preserves outage severity', async () => {
-  const { readFile } = await import('node:fs/promises');
-  const fallback = JSON.parse(await readFile(new URL('../public/fallback/current.json', import.meta.url)));
+  const { PUBLIC_FALLBACKS } = await import('../src/fallback.mjs');
+  const fallback = { ranges: Object.fromEntries(Object.entries(PUBLIC_FALLBACKS).map(([key, value]) => [key, value.range])) };
   for (const range of Object.values(fallback.ranges)) {
     const statuses = range.services.map((service) => service.status);
     if (statuses.includes('major_outage')) assert.equal(range.overall_status, 'major_system_outage');
@@ -58,4 +58,19 @@ test('rejects shifted and irregular bucket timelines', () => {
   const irregular = snapshot(now);
   irregular.ranges['7'].services[0].buckets[4].started_at = new Date(now - 79 * 7_200_000 + 1_000).toISOString();
   assert.throws(() => validateSnapshot(irregular, now), /bucket timeline|bucket interval/);
+});
+
+test('public ETags invalidate pre-privacy caches', () => {
+  const payload = publicRange(snapshot(now), 1, now);
+  assert.match(responseEtag(payload), /^"privacy-v2-/);
+});
+
+
+test('unknown current status preserves non-null historical uptime', () => {
+  const value = snapshot(now);
+  value.ranges['1'].services[0].status = 'unknown';
+  value.ranges['1'].services[0].uptime = 97.4;
+  const projected = publicRange(value, 1, now).range.services[0];
+  assert.equal(projected.status, 'operational');
+  assert.equal(projected.uptime, 97.4);
 });

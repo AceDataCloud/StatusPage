@@ -12,9 +12,13 @@ test('frontend renders source freshness without cache busting', () => {
   assert.match(html, /id="stale-banner"/);
 });
 
-test('frontend presents no data as operational green and avoids remote innerHTML', () => {
-  assert.match(app, /unknown: \{[^\n]+label: 'Operational'[^\n]+bg-emerald-500/);
-  assert.doesNotMatch(app, /No Data|No Recent Observations|No observed traffic/);
+test('frontend presents no data as neutral unknown and avoids remote innerHTML', () => {
+  assert.match(app, /unknown: \{[^\n]+label: 'No Data'[^\n]+bg-slate-200/);
+  assert.match(app, /no_data: \['Status Data Unavailable'[^\n]+bg-slate-50/);
+  assert.match(app, /bucket\.no_data \? 'No Data'/);
+  assert.match(app, /service\.uptime === null \? 'No Data'/);
+  assert.doesNotMatch(app, /unknown: \{[^\n]+label: 'Operational'/);
+  assert.doesNotMatch(app, /no_data: \['All Systems Operational'/);
   assert.doesNotMatch(app, /innerHTML/);
   assert.match(app, /textContent = service\.title/);
 });

@@ -5,14 +5,14 @@
     degraded: { label: 'Degraded', barColor: 'bg-yellow-400', dotColor: 'bg-yellow-400', textColor: 'text-yellow-600 dark:text-yellow-400' },
     partial_outage: { label: 'Partial Outage', barColor: 'bg-orange-500', dotColor: 'bg-orange-500', textColor: 'text-orange-600 dark:text-orange-400' },
     major_outage: { label: 'Major Outage', barColor: 'bg-red-500', dotColor: 'bg-red-500', textColor: 'text-red-600 dark:text-red-400' },
-    unknown: { label: 'Operational', barColor: 'bg-emerald-500', dotColor: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' }
+    unknown: { label: 'No Data', barColor: 'bg-slate-200 dark:bg-slate-700', dotColor: 'bg-slate-400 dark:bg-slate-500', textColor: 'text-slate-500 dark:text-slate-400' }
   };
   const OVERALL = {
     all_systems_operational: ['All Systems Operational', 'bg-emerald-50 dark:bg-emerald-950/30', 'border-emerald-200 dark:border-emerald-800/50', 'bg-emerald-500', 'text-emerald-700 dark:text-emerald-300', '✓'],
     minor_service_disruption: ['Minor Service Disruption', 'bg-yellow-50 dark:bg-yellow-950/30', 'border-yellow-200 dark:border-yellow-800/50', 'bg-yellow-500', 'text-yellow-700 dark:text-yellow-300', '!'],
     partial_system_outage: ['Partial System Outage', 'bg-orange-50 dark:bg-orange-950/30', 'border-orange-200 dark:border-orange-800/50', 'bg-orange-500', 'text-orange-700 dark:text-orange-300', '!'],
     major_system_outage: ['Major System Outage', 'bg-red-50 dark:bg-red-950/30', 'border-red-200 dark:border-red-800/50', 'bg-red-500', 'text-red-700 dark:text-red-300', '×'],
-    no_data: ['All Systems Operational', 'bg-emerald-50 dark:bg-emerald-950/30', 'border-emerald-200 dark:border-emerald-800/50', 'bg-emerald-500', 'text-emerald-700 dark:text-emerald-300', '✓']
+    no_data: ['Status Data Unavailable', 'bg-slate-50 dark:bg-slate-900/40', 'border-slate-300 dark:border-slate-700', 'bg-slate-500', 'text-slate-700 dark:text-slate-300', '?']
   };
   let currentDays = 1;
   let requestSequence = 0;
@@ -43,7 +43,7 @@
     date.className = 'font-medium';
     date.textContent = formatDate(bucket.started_at);
     const detail = document.createElement('div');
-    detail.textContent = bucket.no_data ? 'Operational' : `${bucket.uptime.toFixed(1)}% uptime`;
+    detail.textContent = bucket.no_data ? 'No Data' : `${bucket.uptime.toFixed(1)}% uptime`;
     element.append(date, detail);
     return element;
   }
@@ -69,7 +69,7 @@
     label.textContent = config.label;
     const uptime = document.createElement('span');
     uptime.className = 'text-[11px] text-slate-400 dark:text-slate-500';
-    uptime.textContent = service.uptime === null ? 'Operational' : `${service.uptime.toFixed(1)}%`;
+    uptime.textContent = service.uptime === null ? 'No Data' : `${service.uptime.toFixed(1)}%`;
     summary.append(label, uptime);
     header.append(identity, summary);
 
@@ -90,7 +90,7 @@
     const middle = document.createElement('span');
     const last = document.createElement('span');
     first.textContent = service.buckets.length ? new Date(service.buckets[0].started_at).toLocaleDateString() : '';
-    middle.textContent = service.uptime === null ? 'Operational' : `${service.uptime.toFixed(1)}% uptime`;
+    middle.textContent = service.uptime === null ? 'No Data' : `${service.uptime.toFixed(1)}% uptime`;
     last.textContent = service.buckets.length ? new Date(service.buckets.at(-1).started_at).toLocaleDateString() : '';
     labels.append(first, middle, last);
     card.append(header, bars, labels);

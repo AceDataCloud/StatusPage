@@ -7,6 +7,9 @@
     "deploy:worker": "node scripts/generate-worker-config.mjs && wrangler deploy --config .wrangler.generated.jsonc"
   },
   "devDependencies": {
-    "wrangler": "4.127.1"
+    "wrangler": "4.143.1"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
   }
 }

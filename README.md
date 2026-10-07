@@ -43,7 +43,7 @@ Do not commit generated Wrangler configuration or secrets. `scripts/generate-wor
 ## Refresh and freshness
 
 - PlatformBackend completes one aggregate bucket every 15 minutes.
-- The scheduled Worker polls every five minutes. Conditional requests use ETags, so an unchanged Backend snapshot does not replace the last good KV document. This also catches snapshots whose aggregation or image pull takes more than two minutes.
+- The scheduled Worker polls every five minutes at minutes 4, 9, 14, and so on, shortly after the Backend producer's minutes 2, 17, 32, and 47. Conditional requests use ETags, so an unchanged Backend snapshot does not replace the last good KV document. Recheck real scheduled events after deployment; the Cloudflare schedule API can report the desired cron while old events still run.
 - The page refreshes once per minute using normal HTTP caching and ETags.
 - Snapshots older than the backend freshness threshold are visibly marked delayed.
 

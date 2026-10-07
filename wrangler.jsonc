@@ -4,6 +4,6 @@
   "main": "worker/index.mjs",
   "compatibility_date": "2026-08-01",
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": ["4,9,14,19,24,29,34,39,44,49,54,59 * * * *"]
   }
 }
